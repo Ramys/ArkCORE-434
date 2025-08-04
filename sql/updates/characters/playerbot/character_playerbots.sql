@@ -25,4 +25,4 @@ CREATE TABLE `character_npcbot` (
   `equipNeck` int(10) default NULL,
   `active` tinyint(3) default NULL,
   PRIMARY KEY  (`owner`,`entry`)
-)  ENGINE=InnoDB DEFAULT CHARSET=utf8;
+)  ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

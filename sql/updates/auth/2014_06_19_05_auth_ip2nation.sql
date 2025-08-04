@@ -27,7 +27,7 @@ CREATE TABLE `ip2nation` (
   `ip` int(11) unsigned NOT NULL DEFAULT '0',
   `country` char(2) NOT NULL DEFAULT '',
   KEY `ip` (`ip`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 
@@ -60,7 +60,7 @@ CREATE TABLE `ip2nationCountries` (
   `lon` float NOT NULL DEFAULT '0',
   PRIMARY KEY (`code`),
   KEY `code` (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 

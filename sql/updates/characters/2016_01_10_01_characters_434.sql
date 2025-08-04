@@ -21,7 +21,7 @@ CREATE TABLE `guild_member` (
   UNIQUE KEY `guid_key` (`guid`) USING BTREE,
   KEY `guildid_key` (`guildid`) USING BTREE,
   KEY `guildid_rank_key` (`guildid`,`rank`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Guild System';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Guild System';
 
 -- ----------------------------
 -- Table structure for `guild_old_member`
@@ -32,7 +32,7 @@ CREATE TABLE `guild_old_member` (
   `guildId` int(10) NOT NULL,
   `weekReputation` int(10) NOT NULL,
   `leaveDate` int(10) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ----------------------------
@@ -60,7 +60,7 @@ CREATE TABLE `guild` (
   `DungeonChallenge` int(10) NOT NULL DEFAULT '0',
   `experience` bigint(20) unsigned DEFAULT '0',
   PRIMARY KEY (`guildid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Guild System';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Guild System';
 
 
 
