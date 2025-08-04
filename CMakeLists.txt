@@ -8,18 +8,28 @@
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-# Set projectname (must be done AFTER setting configurationtypes)
-
-project(ArkCORE-434)
-
+# Set minimum CMake version first
 if( UNIX )
-  cmake_minimum_required(VERSION 3.10.2)
+  cmake_minimum_required(VERSION 3.16.3)
 else()
-  cmake_minimum_required(VERSION 3.15.1)
+  cmake_minimum_required(VERSION 3.16.3)
 endif()
 
+# Set projectname (must be done AFTER setting configurationtypes)
+project(ArkCORE-434)
+
 # CMake policies (can not be handled elsewhere)
-cmake_policy(SET CMP0005 OLD)
+if(POLICY CMP0005)
+  cmake_policy(SET CMP0005 OLD)
+endif()
+
+# Additional policies for modern CMake
+if(POLICY CMP0074)
+  cmake_policy(SET CMP0074 NEW)  # Use PackageName_ROOT variables
+endif()
+if(POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)  # option() honors normal variables
+endif()
 
 # add this options before PROJECT keyword
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
@@ -57,9 +67,12 @@ include(CheckPlatform)
 set(OPENSSL_EXPECTED_VERSION 1.1.1)
 set(ACE_EXPECTED_VERSION 6.4.5)
 
+# For MySQL 8.0 compatibility
+set(MYSQL_EXPECTED_VERSION 8.0.0)
+
 find_package(PCHSupport)
 find_package(ACE REQUIRED)
-find_package(OpenSSL REQUIRED)
+find_package(OpenSSL 1.1.1 REQUIRED)  # Use built-in OpenSSL finder
 find_package(Threads REQUIRED)
 find_package(MySQL REQUIRED)
 

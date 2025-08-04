@@ -85,8 +85,14 @@ bool MySQLConnection::Open()
     char const* unix_socket;
     //unsigned int timeout = 10;
 
-    mysql_options(mysqlInit, MYSQL_SET_CHARSET_NAME, "utf8");
+    mysql_options(mysqlInit, MYSQL_SET_CHARSET_NAME, "utf8mb4");
     //mysql_options(mysqlInit, MYSQL_OPT_READ_TIMEOUT, (char const*)&timeout);
+    
+    // MySQL 8.0 SSL and authentication configuration
+    enum mysql_ssl_mode ssl_mode = SSL_MODE_PREFERRED;
+    mysql_options(mysqlInit, MYSQL_OPT_SSL_MODE, &ssl_mode);
+    bool reconnect = true;
+    mysql_options(mysqlInit, MYSQL_OPT_RECONNECT, &reconnect);
     #ifdef _WIN32
     if (m_connectionInfo.host == ".")                                           // named pipe use option (Windows)
     {
@@ -133,9 +139,9 @@ bool MySQLConnection::Open()
         TC_LOG_INFO("sql.sql", "Connected to MySQL database at %s", m_connectionInfo.host.c_str());
         mysql_autocommit(m_Mysql, 1);
 
-        // set connection properties to UTF8 to properly handle locales for different
-        // server configs - core sends data in UTF8, so MySQL must expect UTF8 too
-        mysql_set_character_set(m_Mysql, "utf8");
+        // set connection properties to UTF8MB4 to properly handle locales for different
+        // server configs - core sends data in UTF8, so MySQL must expect UTF8MB4 too
+        mysql_set_character_set(m_Mysql, "utf8mb4");
         return PrepareStatements();
     }
     else

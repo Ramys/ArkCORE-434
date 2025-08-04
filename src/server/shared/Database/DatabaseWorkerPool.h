@@ -32,8 +32,8 @@
 #include "QueryHolder.h"
 #include "AdhocStatement.h"
 
-#define MIN_MYSQL_SERVER_VERSION 50100u
-#define MIN_MYSQL_CLIENT_VERSION 50100u
+#define MIN_MYSQL_SERVER_VERSION 80000u
+#define MIN_MYSQL_CLIENT_VERSION 80000u
 
 class PingOperation : public SQLOperation
 {

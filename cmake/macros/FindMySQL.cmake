@@ -83,11 +83,21 @@ find_path(MYSQL_INCLUDE_DIR
     /usr/local/include
     /usr/local/include/mysql
     /usr/local/mysql/include
+    /opt/mysql/include
+    /opt/mysql/server/include
+    /usr/include/mysql++
+    /usr/local/include/mysql++
     "C:/Program Files/MySQL/MySQL Server 8.0/include"
+    "C:/Program Files/MySQL/MySQL Server 8.1/include"
+    "C:/Program Files/MySQL/MySQL Server 8.2/include"
+    "C:/Program Files/MySQL/MySQL Server 8.3/include"
+    "C:/Program Files/MySQL/MySQL Server 8.4/include"
     "C:/Program Files/MySQL/include"
     "C:/MySQL/include"
     "[HKEY_LOCAL_MACHINE\\SOFTWARE\\MySQL AB\\MySQL Server 8.0;Location]/include"
     "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\MySQL AB\\MySQL Server 8.0;Location]/include"
+    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\MySQL AB\\MySQL Server 8.1;Location]/include"
+    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\MySQL AB\\MySQL Server 8.1;Location]/include"
     "$ENV{ProgramFiles}/MySQL/*/include"
     "$ENV{SystemDrive}/MySQL/*/include"
     "c:/msys/local/include"
@@ -99,14 +109,19 @@ if( UNIX )
   foreach(LIB ${MYSQL_ADD_LIBRARIES})
     find_library( MYSQL_LIBRARY 
       NAMES
-        mysql libmysql ${LIB}
+        mysql libmysql ${LIB} mysqlclient libmysqlclient
       PATHS
         ${MYSQL_ADD_LIBRARIES_PATH}
         /usr/lib
         /usr/lib/mysql
+        /usr/lib/x86_64-linux-gnu
+        /usr/lib64
+        /usr/lib64/mysql
         /usr/local/lib
         /usr/local/lib/mysql
         /usr/local/mysql/lib
+        /opt/mysql/lib
+        /opt/mysql/server/lib
       DOC "Specify the location of the mysql library here."
     )
   endforeach(LIB ${MYSQL_ADD_LIBRARY})
@@ -115,10 +130,19 @@ endif( UNIX )
 if( WIN32 )
   find_library( MYSQL_LIBRARY 
     NAMES
-      libmysql
+      libmysql mysql mysqlclient
     PATHS
       ${MYSQL_ADD_LIBRARIES_PATH}
+      "C:/Program Files/MySQL/MySQL Server 8.0/lib"
       "C:/Program Files/MySQL/MySQL Server 8.0/lib/opt"
+      "C:/Program Files/MySQL/MySQL Server 8.1/lib"
+      "C:/Program Files/MySQL/MySQL Server 8.1/lib/opt"
+      "C:/Program Files/MySQL/MySQL Server 8.2/lib"
+      "C:/Program Files/MySQL/MySQL Server 8.2/lib/opt"
+      "C:/Program Files/MySQL/MySQL Server 8.3/lib"
+      "C:/Program Files/MySQL/MySQL Server 8.3/lib/opt"
+      "C:/Program Files/MySQL/MySQL Server 8.4/lib"
+      "C:/Program Files/MySQL/MySQL Server 8.4/lib/opt"
       "C:/Program Files/MySQL/lib"
       "C:/MySQL/lib/debug"
       "C:/MySQL/lib"
@@ -126,9 +150,13 @@ if( WIN32 )
       "[HKEY_LOCAL_MACHINE\\SOFTWARE\\MySQL AB\\MySQL Server 8.0;Location]/lib/opt"
       "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\MySQL AB\\MySQL Server 8.0;Location]/lib"
       "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\MySQL AB\\MySQL Server 8.0;Location]/lib/opt"
+      "[HKEY_LOCAL_MACHINE\\SOFTWARE\\MySQL AB\\MySQL Server 8.1;Location]/lib"
+      "[HKEY_LOCAL_MACHINE\\SOFTWARE\\MySQL AB\\MySQL Server 8.1;Location]/lib/opt"
+      "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\MySQL AB\\MySQL Server 8.1;Location]/lib"
+      "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\MySQL AB\\MySQL Server 8.1;Location]/lib/opt"
       "$ENV{ProgramFiles}/MySQL/*/lib/opt"
       "$ENV{SystemDrive}/MySQL/*/lib/opt"
-      "c:/msys/local/include"
+      "c:/msys/local/lib"
     DOC "Specify the location of the mysql library here."
   )
 endif( WIN32 )

@@ -47,7 +47,7 @@ CREATE TABLE `account` (
   `trial_end` int(10) unsigned NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_username` (`username`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='Account System';
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Account System';
 
 -- ----------------------------
 -- Records of account
@@ -63,7 +63,7 @@ CREATE TABLE `account_access` (
   `gmlevel` tinyint(3) unsigned NOT NULL,
   `RealmID` int(11) NOT NULL DEFAULT '-1',
   PRIMARY KEY (`id`,`RealmID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of account_access
@@ -81,7 +81,7 @@ CREATE TABLE `account_banned` (
   `banreason` varchar(255) NOT NULL,
   `active` tinyint(3) unsigned NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`,`bandate`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Ban List';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Ban List';
 
 -- ----------------------------
 -- Records of account_banned
@@ -97,7 +97,7 @@ CREATE TABLE `autobroadcast` (
   `weight` tinyint(3) unsigned DEFAULT '1',
   `text` longtext NOT NULL,
   PRIMARY KEY (`id`,`realmid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of autobroadcast
@@ -111,7 +111,7 @@ CREATE TABLE `ip2nation` (
   `ip` int(11) unsigned NOT NULL DEFAULT '0',
   `country` char(2) NOT NULL DEFAULT '',
   KEY `ip` (`ip`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of ip2nation
@@ -131,7 +131,7 @@ CREATE TABLE `ip2nationcountries` (
   `lon` float NOT NULL DEFAULT '0',
   PRIMARY KEY (`code`),
   KEY `code` (`code`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of ip2nationcountries
@@ -148,7 +148,7 @@ CREATE TABLE `ip_banned` (
   `bannedby` varchar(50) NOT NULL DEFAULT '[Console]',
   `banreason` varchar(255) NOT NULL DEFAULT 'no reason',
   PRIMARY KEY (`ip`,`bandate`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Banned IPs';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Banned IPs';
 
 -- ----------------------------
 -- Records of ip_banned
@@ -164,7 +164,7 @@ CREATE TABLE `logs` (
   `type` tinyint(3) unsigned NOT NULL,
   `level` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `string` text CHARACTER SET latin1
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of logs
@@ -183,7 +183,7 @@ CREATE TABLE `rbac_account_permissions` (
   KEY `fk__rbac_account_roles__rbac_permissions` (`permissionId`) USING BTREE,
   CONSTRAINT `rbac_account_permissions_ibfk_1` FOREIGN KEY (`accountId`) REFERENCES `account` (`id`) ON DELETE CASCADE,
   CONSTRAINT `rbac_account_permissions_ibfk_2` FOREIGN KEY (`permissionId`) REFERENCES `rbac_permissions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Account-Permission relation';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Account-Permission relation';
 
 -- ----------------------------
 -- Records of rbac_account_permissions
@@ -199,7 +199,7 @@ CREATE TABLE `rbac_default_permissions` (
   PRIMARY KEY (`secId`,`permissionId`),
   KEY `fk__rbac_default_permissions__rbac_permissions` (`permissionId`) USING BTREE,
   CONSTRAINT `rbac_default_permissions_ibfk_1` FOREIGN KEY (`permissionId`) REFERENCES `rbac_permissions` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Default permission to assign to different account security levels';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Default permission to assign to different account security levels';
 
 -- ----------------------------
 -- Records of rbac_default_permissions
@@ -221,7 +221,7 @@ CREATE TABLE `rbac_linked_permissions` (
   KEY `fk__rbac_linked_permissions__rbac_permissions2` (`linkedId`) USING BTREE,
   CONSTRAINT `rbac_linked_permissions_ibfk_1` FOREIGN KEY (`id`) REFERENCES `rbac_permissions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `rbac_linked_permissions_ibfk_2` FOREIGN KEY (`linkedId`) REFERENCES `rbac_permissions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Permission - Linked Permission relation';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Permission - Linked Permission relation';
 
 -- ----------------------------
 -- Records of rbac_linked_permissions
@@ -858,7 +858,7 @@ CREATE TABLE `rbac_permissions` (
   `id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'Permission id',
   `name` varchar(100) NOT NULL COMMENT 'Permission name',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Permission List';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Permission List';
 
 -- ----------------------------
 -- Records of rbac_permissions
@@ -1514,7 +1514,7 @@ CREATE TABLE `realmcharacters` (
   `numchars` tinyint(3) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`realmid`,`acctid`),
   KEY `acctid` (`acctid`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Realm Character Tracker';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Realm Character Tracker';
 
 -- ----------------------------
 -- Records of realmcharacters
@@ -1540,7 +1540,7 @@ CREATE TABLE `realmlist` (
   `gamebuild` int(10) unsigned NOT NULL DEFAULT '15595',
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_name` (`name`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='Realm System';
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Realm System';
 
 -- ----------------------------
 -- Records of realmlist
@@ -1558,7 +1558,7 @@ CREATE TABLE `uptime` (
   `maxplayers` smallint(5) unsigned NOT NULL DEFAULT '0',
   `revision` varchar(255) NOT NULL DEFAULT 'Trinitycore',
   PRIMARY KEY (`realmid`,`starttime`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Uptime system';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Uptime system';
 
 -- ----------------------------
 -- Records of uptime

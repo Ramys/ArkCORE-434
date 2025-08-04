@@ -7,7 +7,7 @@ CREATE TABLE `questgiver_quest` (
   `timeChange` int(10) unsigned NOT NULL DEFAULT '0',
   `isRewarded` tinyint(3) NOT NULL DEFAULT '0',
   PRIMARY KEY (`playerGuid`,`questId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 
