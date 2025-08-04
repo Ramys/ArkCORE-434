@@ -1,51 +1,46 @@
 /*
  * Copyright (C) 2011-2016 ArkCORE <http://www.arkania.net/>
  *
+ * End Time Boss Scripts - Main Include File
+ * 
+ * This file includes all boss scripts for the End Time dungeon:
+ * - Echo of Baine
+ * - Echo of Jaina  
+ * - Echo of Sylvanas
+ * - Echo of Tyrande
+ * - Murozond
+ *
  * THIS particular file is NOT free software; third-party users 
  * should NOT have access to it, redistribute it or modify it. :)
  */
 
-#ifndef DEF_TIME_END_H
-#define DEF_TIME_END_H
+#include "ScriptMgr.h"
+#include "end_time.h"
 
-enum Data
+// Include all boss scripts
+extern void AddSC_boss_echo_of_baine();
+extern void AddSC_boss_echo_of_jaina();
+extern void AddSC_boss_echo_of_sylvanas();
+extern void AddSC_boss_echo_of_tyrande();
+extern void AddSC_boss_murozond();
+
+class end_time_bosses : public WorldScript
 {
-    DATA_FIRST_ENCOUNTER,
-    DATA_SECOND_ENCOUNTER,
-    DATA_LAST_ENCOUNTER,
+    public:
+        end_time_bosses() : WorldScript("end_time_bosses") { }
 
-    // Misc
-    DATA_JAINA_PICKED_STATE,
+        void OnStartup() override
+        {
+            // Register all boss scripts
+            AddSC_boss_echo_of_baine();
+            AddSC_boss_echo_of_jaina();
+            AddSC_boss_echo_of_sylvanas();
+            AddSC_boss_echo_of_tyrande();
+            AddSC_boss_murozond();
+        }
 };
 
-enum Bosses
+void AddSC_end_time_bosses()
 {
-    BOSS_ECHO_OF_SYLVANAS,
-    BOSS_ECHO_OF_BAINE,
-    BOSS_MUROZOND,
-    BOSS_ECHO_OF_TYRANDE,
-    BOSS_ECHO_OF_JAINA,
-};
-
-enum GameObjectIds
-{
-    MUROZOND_CACHE                   = 209547,
-    GO_ET_TELEPORT                   = 209438,
-};
-
-enum CreatureIds
-{
-    NPC_ECHO_OF_JAINA               = 54445,
-    NPC_ECHO_OF_BAINE               = 54431,
-    NPC_ECHO_OF_SYLVANAS            = 54123,
-    NPC_ECHO_OF_TYRANDE             = 54544,
-    NPC_MUROZOND                    = 54432,
-};
-
-enum WorldStatesET
-{
-    WORLDSTATE_SHOW_FRAGMENTS       = 6046,
-    WORLDSTATE_FRAGMENTS_COLLECTED  = 6025,
-};
-
-#endif
+    new end_time_bosses();
+} 
