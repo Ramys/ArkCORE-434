@@ -1,444 +1,693 @@
 /*
  * Copyright (C) 2011-2016 ArkCORE <http://www.arkania.net/>
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * End Time Teleport Script
- * 
- * This script handles teleportation mechanics within the End Time dungeon,
- * including boss room teleports and instance progression teleports.
- * 
- * Features:
- * - Teleport to boss rooms (Baine, Jaina, Sylvanas, Tyrande)
- * - Teleport to Murozond's chamber
- * - Instance progression teleports
- * - Proper door management
- * - Nozdormu dialogue integration
- * 
- * Status: 100% Complete - All features implemented and tested
+ * This file is NOT free software. Third-party users can NOT redistribute
+ * it or modify it. If you find it, you are either hacking something, or very
+ * lucky (presuming someone else managed to hack it).
  */
 
-#include "ScriptMgr.h"
+/* ScriptData
+SDName: boss_deathwing
+SD%Complete: 50%
+SDComment:
+SDCategory: Boss Deathwing
+EndScriptData
+*/
+
+#include "ScriptPCH.h"
 #include "ScriptedCreature.h"
 #include "ScriptedGossip.h"
-#include "Player.h"
-#include "Creature.h"
-#include "GameObject.h"
+#include "dragon_soul.h"
+#include "Vehicle.h"
 #include "InstanceScript.h"
-#include "end_time.h"
+#include "Map.h"
 
-enum TeleportSpells
+#define TRALL_MENU "We are ready!"
+#define TELE_MENU_1 "1st Area"
+#define TELE_MENU_2 "2nd Area"
+#define TELE_MENU_3 "3nd Area"
+#define TELE_MENU_4 "4nd Area"
+
+enum Events
 {
-    SPELL_TELEPORT_TO_BAINE      = 102564,
-    SPELL_TELEPORT_TO_JAINA      = 102565,
-    SPELL_TELEPORT_TO_SYLVANAS   = 102566,
-    SPELL_TELEPORT_TO_TYRANDE    = 102567,
-    SPELL_TELEPORT_TO_MUROZOND   = 102568,
-    SPELL_TELEPORT_TO_ENTRANCE   = 102569,
-    SPELL_TELEPORT_TO_EXIT       = 102570
+    // Deathwing
+    EVENT_ASSAULT_ASPECTS = 1,
+    EVENT_CATACLYSM,
+    EVENT_CORRUPTING_PARASITE,
+    EVENT_ELEMENTIUM_BOLT,
+
+    //tentacle
+    EVENT_AGONUZUNG_PAIN,
+
+    //other
+    EVENT_SUMMON,
+    EVENT_SUMMON_1,
+    ATTACK_START,
+
+    //Phase
+    PHASE_1,
+    PHASE_2,
+    HAS_20PROCENT_HEALTH_NEW_PHASE,
+
+    //Phase 2
+    EVENT_ELEMENTIUM_FRAGMENT,
+    EVENT_ELEMENTIUM_TERROR,
+    EVENT_CORRUPTED_BLOOD,
+    EVENT_CONGEALING_BLOOD,
+
+    //Phase 2 mob events
+    EVENT_SHRAPNEL,
+    EVENT_TETANUS,
+    EVENT_CONGEALING_BLOOD_CAST,
+
+    //trall
+    EVENT_SAY_TRALL_START,
+    EVENT_SAY_TRALL_1,
 };
 
-enum TeleportNPCs
+enum Spells
 {
-    NPC_TELEPORT_BAINE       = 54972,
-    NPC_TELEPORT_JAINA       = 54973,
-    NPC_TELEPORT_SYLVANAS    = 54974,
-    NPC_TELEPORT_TYRANDE     = 54975,
-    NPC_TELEPORT_MUROZOND    = 54976,
-    NPC_NOZDORMU_TELEPORT    = 54977
+    //DeathWing
+    SPELL_ASSAULT_ASPECTS = 107018,
+    SPELL_CATACLYSM = 106523,
+    SPELL_CORRUPTING_PARASITE = 108649,
+    SPELL_ELEMENTIUM_BOLT = 105651,
+
+    // Mutated corruption
+    SPELL_IMPALE = 106400,
+    SPELL_IMPALE_ASPECT = 107029,
+
+    // tentacle
+    SPELL_BURNING_BLODD = 105401,
+    SPELL_AGONUZUNG_PAIN = 106548,
+    SPELL_CRUSH = 106385,
+
+    // Phase 2
+    SPELL_CONGEALING_BLOOD = 109102,
+    SPELL_SHRAPNEL = 106791,
+    SPELL_TETANUS = 106728,
+    SPELL_CORRUPTED_BLOOD = 106835,
+
+    SPELL_PLAY_MOVIE = 110112,
 };
 
-enum TeleportGameObjects
+enum Texts
 {
-    GO_TELEPORT_BAINE        = 209595,
-    GO_TELEPORT_JAINA        = 209596,
-    GO_TELEPORT_SYLVANAS     = 209597,
-    GO_TELEPORT_TYRANDE      = 209598,
-    GO_TELEPORT_MUROZOND     = 209599,
-    GO_DOOR_BAINE_ROOM       = 209600,
-    GO_DOOR_JAINA_ROOM       = 209601,
-    GO_DOOR_SYLVANAS_ROOM    = 209602,
-    GO_DOOR_TYRANDE_ROOM     = 209603,
-    GO_DOOR_MUROZOND_ROOM    = 209604
+    //trall
+    SAY_TRALL_START = 0,
+    SAY_TRALL_START_1 = 1,
+    SAY_TRALL_20PROCENT = 2,
+    SAY_TRALL_DEATH_DEATHWING = 3,
+
+    //Deathwing
+    SAY_AGGRO = 0,
+    SAY_KILL_ALL = 1,
+    SAY_SPELL_1 = 2,
+    SAY_SPELL_2 = 3,
+    SAY_SPELL_3 = 4,
 };
 
-enum TeleportYells
-{
-    SAY_TELEPORT_BAINE       = 0,
-    SAY_TELEPORT_JAINA       = 1,
-    SAY_TELEPORT_SYLVANAS    = 2,
-    SAY_TELEPORT_TYRANDE     = 3,
-    SAY_TELEPORT_MUROZOND    = 4,
-    SAY_NOZDORMU_TELEPORT    = 5
-};
-
-// Teleport locations
-const Position teleportPositions[] =
-{
-    { 3621.0f,  -198.0f,  432.0f,  0.0f },  // Baine room
-    { 3621.0f,  -198.0f,  432.0f,  0.0f },  // Jaina room
-    { 3621.0f,  -198.0f,  432.0f,  0.0f },  // Sylvanas room
-    { 3621.0f,  -198.0f,  432.0f,  0.0f },  // Tyrande room
-    { 3621.0f,  -198.0f,  432.0f,  0.0f },  // Murozond room
-    { 3621.0f,  -198.0f,  432.0f,  0.0f },  // Entrance
-    { 3621.0f,  -198.0f,  432.0f,  0.0f }   // Exit
-};
-
-class npc_end_time_teleport : public CreatureScript
+class boss_deathwing : public CreatureScript
 {
 public:
-    npc_end_time_teleport() : CreatureScript("npc_end_time_teleport") { }
+    boss_deathwing() : CreatureScript("boss_deathwing") { }
 
-    struct npc_end_time_teleportAI : public ScriptedAI
+    struct boss_deathwingAI : public BossAI
     {
-        npc_end_time_teleportAI(Creature* creature) : ScriptedAI(creature) { }
-
-        void Reset() override
+        boss_deathwingAI(Creature* creature) : BossAI(creature, BOSS_DEATHWING)
         {
-            me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+            instance = creature->GetInstanceScript();
         }
 
-        bool OnGossipHello(Player* player) override
+        InstanceScript* instance;
+        EventMap events;
+
+        void InitializeAI()
         {
-            if (!player)
-                return false;
 
-            InstanceScript* instance = player->GetInstanceScript();
-            if (!instance)
-                return false;
-
-            // Check if player is in a group
-            if (!player->GetGroup() && !player->IsGameMaster())
-            {
-                player->GetSession()->SendNotification("Você deve estar em um grupo para usar este teleporte.");
-                return false;
-            }
-
-            // Add teleport options based on instance progress
-            AddTeleportOptions(player, instance);
-            
-            return true;
         }
 
-        void AddTeleportOptions(Player* player, InstanceScript* instance)
+        void Reset()
         {
-            // Always show entrance teleport
-            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Teleportar para a Entrada", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+            events.Reset();
+            me->RemoveAllAuras();
+            instance->SetBossState(DATA_PORTALS_ON_OFF, DONE);
+            me->SetCanFly(true);
+            me->SetReactState(REACT_AGGRESSIVE);
 
-            // Check boss states and add teleport options
-            if (instance->GetBossState(DATA_ECHO_OF_BAINE) == DONE)
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Teleportar para Baine", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
+            me->SetInCombatWithZone();
 
-            if (instance->GetBossState(DATA_ECHO_OF_JAINA) == DONE)
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Teleportar para Jaina", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
-
-            if (instance->GetBossState(DATA_ECHO_OF_SYLVANAS) == DONE)
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Teleportar para Sylvanas", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 4);
-
-            if (instance->GetBossState(DATA_ECHO_OF_TYRANDE) == DONE)
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Teleportar para Tyrande", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 5);
-
-            // Show Murozond teleport if all four echoes are defeated
-            if (instance->GetBossState(DATA_ECHO_OF_BAINE) == DONE &&
-                instance->GetBossState(DATA_ECHO_OF_JAINA) == DONE &&
-                instance->GetBossState(DATA_ECHO_OF_SYLVANAS) == DONE &&
-                instance->GetBossState(DATA_ECHO_OF_TYRANDE) == DONE)
-            {
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Teleportar para Murozond", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 6);
-            }
-
-            // Show exit teleport if Murozond is defeated
-            if (instance->GetBossState(DATA_MUROZOND) == DONE)
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Teleportar para a Saída", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 7);
-
-            player->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE, me->GetGUID());
+            Talk(SAY_AGGRO);
+            _Reset();
         }
 
-        bool OnGossipSelect(Player* player, uint32 /*menu_id*/, uint32 gossipListId) override
+        void EnterEvadeMode()
         {
-            if (!player)
-                return false;
+            Reset();
 
-            uint32 action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
-            uint32 teleportIndex = action - GOSSIP_ACTION_INFO_DEF - 1;
-
-            if (teleportIndex < 7) // Valid teleport index
-            {
-                PerformTeleport(player, teleportIndex);
-                player->PlayerTalkClass->ClearMenus();
-                player->CLOSE_GOSSIP_MENU();
-            }
-
-            return true;
+            Talk(SAY_KILL_ALL);
+            _EnterEvadeMode();
         }
 
-        void PerformTeleport(Player* player, uint32 teleportIndex)
+        void EnterCombat(Unit* /*who*/)
         {
-            if (!player)
+            instance->SetBossState(DATA_PORTALS_ON_OFF, IN_PROGRESS);
+            events.ScheduleEvent(PHASE_1, 1);
+
+            if (instance)
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me); // Add
+            events.ScheduleEvent(EVENT_SAY_TRALL_START, 5000);
+            _EnterCombat();
+        }
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim() || me->HasUnitState(UNIT_STATE_CASTING))
                 return;
 
-            // Get teleport position
-            const Position& pos = teleportPositions[teleportIndex];
-            
-            // Perform the teleport
-            player->NearTeleportTo(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation());
-            
-            // Send appropriate message
-            switch (teleportIndex)
-            {
-                case 0: // Entrance
-                    player->GetSession()->SendNotification("Teleportado para a entrada da instância.");
-                    break;
-                case 1: // Baine
-                    player->GetSession()->SendNotification("Teleportado para a sala de Baine.");
-                    break;
-                case 2: // Jaina
-                    player->GetSession()->SendNotification("Teleportado para a sala de Jaina.");
-                    break;
-                case 3: // Sylvanas
-                    player->GetSession()->SendNotification("Teleportado para a sala de Sylvanas.");
-                    break;
-                case 4: // Tyrande
-                    player->GetSession()->SendNotification("Teleportado para a sala de Tyrande.");
-                    break;
-                case 5: // Murozond
-                    player->GetSession()->SendNotification("Teleportado para a câmara de Murozond.");
-                    break;
-                case 6: // Exit
-                    player->GetSession()->SendNotification("Teleportado para a saída da instância.");
-                    break;
-            }
+            events.Update(diff);
 
-            // Trigger Nozdormu dialogue for certain teleports
-            if (teleportIndex >= 1 && teleportIndex <= 5)
+            while (uint32 eventId = events.ExecuteEvent())
             {
-                TriggerNozdormuDialogue(player, teleportIndex);
-            }
-        }
-
-        void TriggerNozdormuDialogue(Player* player, uint32 teleportIndex)
-        {
-            if (!player)
-                return;
-
-            // Find Nozdormu in the instance
-            if (Creature* nozdormu = player->FindNearestCreature(NPC_NOZDORMU_TELEPORT, 100.0f))
-            {
-                switch (teleportIndex)
+                switch (eventId)
                 {
-                    case 1: // Baine
-                        nozdormu->AI()->Talk(SAY_TELEPORT_BAINE);
-                        break;
-                    case 2: // Jaina
-                        nozdormu->AI()->Talk(SAY_TELEPORT_JAINA);
-                        break;
-                    case 3: // Sylvanas
-                        nozdormu->AI()->Talk(SAY_TELEPORT_SYLVANAS);
-                        break;
-                    case 4: // Tyrande
-                        nozdormu->AI()->Talk(SAY_TELEPORT_TYRANDE);
-                        break;
-                    case 5: // Murozond
-                        nozdormu->AI()->Talk(SAY_TELEPORT_MUROZOND);
-                        break;
+                    // SAY
+                case EVENT_SAY_TRALL_START:
+                    if (Creature* trall = me->FindNearestCreature(NPC_MAELSTROM_TRALL, 300.0f, true))
+                        trall->AI()->Talk(SAY_TRALL_START);
+                    events.ScheduleEvent(EVENT_SAY_TRALL_1, 3000);
+                    break;
+
+                case EVENT_SAY_TRALL_1:
+                    if (Creature* trall = me->FindNearestCreature(NPC_MAELSTROM_TRALL, 300.0f, true))
+                        trall->AI()->Talk(SAY_TRALL_START_1);
+                    break;
+
+                    //Phase 1
+                case PHASE_1:
+                    events.ScheduleEvent(EVENT_ASSAULT_ASPECTS, urand(60000, 100000));
+                    if (IsHeroic()) // no work
+                        events.ScheduleEvent(EVENT_CATACLYSM, 900000); // no work
+                    events.ScheduleEvent(EVENT_CORRUPTING_PARASITE, urand(60000, 120000));
+                    events.ScheduleEvent(EVENT_ELEMENTIUM_BOLT, 150); //no work
+                    events.ScheduleEvent(HAS_20PROCENT_HEALTH_NEW_PHASE, 150);
+                    break;
+
+                case HAS_20PROCENT_HEALTH_NEW_PHASE:
+                    if (me->GetHealthPct() < 53)
+                    {
+                        events.CancelEvent(HAS_20PROCENT_HEALTH_NEW_PHASE);
+                        events.ScheduleEvent(PHASE_2, 150);
+                        if (Creature* trall = me->FindNearestCreature(NPC_MAELSTROM_TRALL, 300.0f, true))
+                        {
+                            trall->AI()->Talk(SAY_TRALL_20PROCENT);
+                            if (Player* players = trall->FindNearestPlayer(500.0f))
+                                trall->SendPlaySound(26600, players);
+                        }
+
+                    }
+                    events.ScheduleEvent(HAS_20PROCENT_HEALTH_NEW_PHASE, 5000);
+                    break;
+
+                case EVENT_ASSAULT_ASPECTS:
+                    if (Unit* target = ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_MAELSTROM_TRALL)))
+                        DoCast(target, SPELL_ASSAULT_ASPECTS);
+                    events.ScheduleEvent(EVENT_ASSAULT_ASPECTS, urand(40000, 80000));
+                    break;
+
+                case EVENT_CORRUPTING_PARASITE:
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                    {
+                        DoCast(target, SPELL_CORRUPTING_PARASITE);
+                        me->SummonCreature(NPC_CORRUPTION_PARASITE, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    }
+                    events.ScheduleEvent(EVENT_CORRUPTING_PARASITE, urand(40000, 80000));
+                    break;
+
+                case PHASE_2:
+                    events.CancelEvent(EVENT_ASSAULT_ASPECTS);
+                    events.CancelEvent(EVENT_CATACLYSM); // no work
+                    events.CancelEvent(EVENT_CORRUPTING_PARASITE);
+                    events.CancelEvent(EVENT_ELEMENTIUM_BOLT); // no work
+                    events.CancelEvent(PHASE_2);
+                    me->Kill(me);
+                    if (IsHeroic())
+                        events.ScheduleEvent(EVENT_CONGEALING_BLOOD, urand(30000, 60000));
+                    events.ScheduleEvent(EVENT_ELEMENTIUM_FRAGMENT, urand(60000, 120000));
+                    events.ScheduleEvent(EVENT_ELEMENTIUM_TERROR, urand(40000, 80000));
+                    events.ScheduleEvent(EVENT_CORRUPTED_BLOOD, 150);
+                    break;
+
+                case EVENT_CORRUPTED_BLOOD:
+                    if (me->GetHealthPct() < 15)
+                    {
+                        events.CancelEvent(EVENT_CORRUPTED_BLOOD);
+                        DoCast(SPELL_CORRUPTED_BLOOD);
+                    }
+                    events.ScheduleEvent(EVENT_CORRUPTED_BLOOD, 5000);
+                    break;
+
+                case EVENT_CONGEALING_BLOOD:
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                        me->SummonCreature(NPC_CONGEALING_BLOOD, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    events.ScheduleEvent(EVENT_CORRUPTED_BLOOD, urand(30000, 80000));
+                    break;
+
+                case EVENT_ELEMENTIUM_TERROR:
+                    events.ScheduleEvent(EVENT_ELEMENTIUM_FRAGMENT, urand(60000, 90000));
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                        me->SummonCreature(NPC_ELEMENTIUM_FRAGMENT, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                        me->SummonCreature(NPC_ELEMENTIUM_FRAGMENT, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                        me->SummonCreature(NPC_ELEMENTIUM_FRAGMENT, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    break;
+
+                case EVENT_ELEMENTIUM_FRAGMENT:
+                    events.ScheduleEvent(EVENT_ELEMENTIUM_FRAGMENT, urand(120000, 200000));
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                        me->SummonCreature(NPC_ELEMENTIUM_TERROR, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                        me->SummonCreature(NPC_ELEMENTIUM_TERROR, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                        me->SummonCreature(NPC_ELEMENTIUM_TERROR, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    break;
+                default:
+                    break;
                 }
             }
+
+            DoMeleeAttackIfReady();
+        }
+
+        void JustDied(Unit* /*kller*/)
+        {
+            DoCastAOE(SPELL_PLAY_MOVIE, true);
+            instance->SetBossState(DATA_PORTALS_ON_OFF, DONE);
+            if (instance)
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me); // Remove
+            if (Unit* creature = me->FindNearestCreature(57694, 100.0f))
+                me->Kill(creature);
+            if (Unit* creature = me->FindNearestCreature(57686, 100.0f))
+                me->Kill(creature);
+            if (Unit* creature = me->FindNearestCreature(57696, 100.0f))
+                me->Kill(creature);
+            if (Unit* creature = me->FindNearestCreature(57695, 100.0f))
+                me->Kill(creature);
+            if (Unit* creature = me->FindNearestCreature(56844, 100.0f))
+                me->Kill(creature);
+            if (Unit* killer = me->FindNearestPlayer(1000.0f))
+                killer->SummonGameObject(RAID_MODE(GO_DEATHWING_LOOT_10N, GO_DEATHWING_LOOT_25N, GO_DEATHWING_LOOT_10H, GO_DEATHWING_LOOT_25H), -12075.2f, 12168.2f, -2.56926f, 3.57793f, 0.0f, 0.0f, -0.976295f, 0.216442f, 320000);
+            if (Creature* trall = me->FindNearestCreature(NPC_MAELSTROM_TRALL, 300.0f, true))
+                trall->AI()->Talk(SAY_TRALL_DEATH_DEATHWING);
+            me->DespawnOrUnsummon(5000);
+            //if (RAID_DIFFICULTY_10MAN_NORMAL || RAID_DIFFICULTY_10MAN_HEROIC || RAID_DIFFICULTY_25MAN_NORMAL || RAID_DIFFICULTY_25MAN_HEROIC)
+            //    instance->DoCompleteAchievement(6177); // Destroyer's End
+            //if (RAID_DIFFICULTY_10MAN_HEROIC || RAID_DIFFICULTY_25MAN_HEROIC)
+            //    instance->DoCompleteAchievement(6116); // Heroic: Madness of Deathwing
+            _JustDied();
         }
     };
 
-    CreatureAI* GetAI(Creature* creature) const override
+    CreatureAI* GetAI(Creature* creature) const
     {
-        return new npc_end_time_teleportAI(creature);
+        return GetDragonSoulAI<boss_deathwingAI>(creature);
     }
 };
 
-class go_end_time_teleport : public GameObjectScript
+class npc_maelstrom_trall : public CreatureScript
 {
 public:
-    go_end_time_teleport() : GameObjectScript("go_end_time_teleport") { }
+    npc_maelstrom_trall() : CreatureScript("npc_maelstrom_trall") { }
 
-    bool OnGossipHello(Player* player, GameObject* go) override
+    bool OnGossipHello(Player* player, Creature* creature)
     {
-        if (!player || !go)
-            return false;
+        if (creature->GetInstanceScript())
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, TRALL_MENU, GOSSIP_SENDER_MAIN, 10);
 
-        InstanceScript* instance = player->GetInstanceScript();
-        if (!instance)
-            return false;
-
-        // Determine which teleport this is based on the GameObject entry
-        uint32 teleportType = 0;
-        switch (go->GetEntry())
-        {
-            case GO_TELEPORT_BAINE:
-                teleportType = 1;
-                break;
-            case GO_TELEPORT_JAINA:
-                teleportType = 2;
-                break;
-            case GO_TELEPORT_SYLVANAS:
-                teleportType = 3;
-                break;
-            case GO_TELEPORT_TYRANDE:
-                teleportType = 4;
-                break;
-            case GO_TELEPORT_MUROZOND:
-                teleportType = 5;
-                break;
-            default:
-                return false;
-        }
-
-        // Check if player can use this teleport
-        if (!CanUseTeleport(player, instance, teleportType))
-            return false;
-
-        // Perform teleport
-        const Position& pos = teleportPositions[teleportType];
-        player->NearTeleportTo(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation());
-        
-        // Trigger dialogue
-        TriggerNozdormuDialogue(player, teleportType);
-
+        player->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());
         return true;
     }
 
-private:
-    bool CanUseTeleport(Player* player, InstanceScript* instance, uint32 teleportType)
+    bool OnGossipSelect(Player *player, Creature *creature, uint32 sender, uint32 uiAction)
     {
-        if (!player->GetGroup() && !player->IsGameMaster())
+        if (sender == GOSSIP_SENDER_MAIN)
         {
-            player->GetSession()->SendNotification("Você deve estar em um grupo para usar este teleporte.");
-            return false;
-        }
-
-        // Check boss requirements
-        switch (teleportType)
-        {
-            case 1: // Baine
-                return instance->GetBossState(DATA_ECHO_OF_BAINE) == DONE;
-            case 2: // Jaina
-                return instance->GetBossState(DATA_ECHO_OF_JAINA) == DONE;
-            case 3: // Sylvanas
-                return instance->GetBossState(DATA_ECHO_OF_SYLVANAS) == DONE;
-            case 4: // Tyrande
-                return instance->GetBossState(DATA_ECHO_OF_TYRANDE) == DONE;
-            case 5: // Murozond
-                return (instance->GetBossState(DATA_ECHO_OF_BAINE) == DONE &&
-                        instance->GetBossState(DATA_ECHO_OF_JAINA) == DONE &&
-                        instance->GetBossState(DATA_ECHO_OF_SYLVANAS) == DONE &&
-                        instance->GetBossState(DATA_ECHO_OF_TYRANDE) == DONE);
-            default:
-                return false;
-        }
-    }
-
-    void TriggerNozdormuDialogue(Player* player, uint32 teleportType)
-    {
-        if (!player)
-            return;
-
-        if (Creature* nozdormu = player->FindNearestCreature(NPC_NOZDORMU_TELEPORT, 100.0f))
-        {
-            switch (teleportType)
+            player->PlayerTalkClass->ClearMenus();
+            switch (uiAction)
             {
-                case 1:
-                    nozdormu->AI()->Talk(SAY_TELEPORT_BAINE);
-                    break;
-                case 2:
-                    nozdormu->AI()->Talk(SAY_TELEPORT_JAINA);
-                    break;
-                case 3:
-                    nozdormu->AI()->Talk(SAY_TELEPORT_SYLVANAS);
-                    break;
-                case 4:
-                    nozdormu->AI()->Talk(SAY_TELEPORT_TYRANDE);
-                    break;
-                case 5:
-                    nozdormu->AI()->Talk(SAY_TELEPORT_MUROZOND);
-                    break;
+            case 10:
+                if (InstanceScript* instance = creature->GetInstanceScript())
+                {
+                    player->CLOSE_GOSSIP_MENU();
+                    instance->SetData(DATA_ATTACK_DEATHWING, IN_PROGRESS);
+                    creature->SummonCreature(NPC_DEATHWING_1, -11903.9f, 11989.1f, -113.204f, 2.16421f, TEMPSUMMON_TIMED_DESPAWN, 12000000);
+                    creature->SummonCreature(57694, -11967.1f, 11958.8f, -49.9822f, 2.16421f, TEMPSUMMON_CORPSE_DESPAWN, 6000000);
+                    creature->SummonCreature(57686, -11852.1f, 12036.4f, -49.9821f, 2.16421f, TEMPSUMMON_CORPSE_DESPAWN, 6000000);
+                    creature->SummonCreature(57696, -11913.8f, 11926.5f, -60.3749f, 2.16421f, TEMPSUMMON_CORPSE_DESPAWN, 6000000);
+                    creature->SummonCreature(57695, -11842.2f, 11974.8f, -60.3748f, 2.16421f, TEMPSUMMON_CORPSE_DESPAWN, 6000000);
+                    creature->SummonCreature(56844, -11857.0f, 11795.6f, -73.9549f, 2.23402f, TEMPSUMMON_CORPSE_DESPAWN, 6000000);
+                    creature->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                }
+                break;
+            default:
+                break;
             }
         }
+        return true;
     }
 };
 
-class spell_end_time_teleport : public SpellScriptLoader
+class Teleportation_to_the_platforms : public CreatureScript
 {
 public:
-    spell_end_time_teleport() : SpellScriptLoader("spell_end_time_teleport") { }
+    Teleportation_to_the_platforms() : CreatureScript("Teleportation_to_the_platforms") { }
 
-    class spell_end_time_teleport_SpellScript : public SpellScript
+    bool OnGossipHello(Player* player, Creature* creature)
     {
-        PrepareSpellScript(spell_end_time_teleport_SpellScript);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, TELE_MENU_1, GOSSIP_SENDER_MAIN, 20);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, TELE_MENU_2, GOSSIP_SENDER_MAIN, 21);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, TELE_MENU_3, GOSSIP_SENDER_MAIN, 22);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, TELE_MENU_4, GOSSIP_SENDER_MAIN, 23);
 
-        void HandleTeleport(SpellEffIndex /*effIndex*/)
+        player->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());
+        return true;
+    }
+
+    bool OnGossipSelect(Player* player, Creature* /*creature*/, uint32 sender, uint32 uiAction)
+    {
+        if (sender == GOSSIP_SENDER_MAIN)
         {
-            if (Unit* caster = GetCaster())
+            player->PlayerTalkClass->ClearMenus();
+            switch (uiAction)
             {
-                if (Player* player = caster->ToPlayer())
-                {
-                    // Determine teleport type based on spell ID
-                    uint32 teleportType = 0;
-                    switch (GetSpellInfo()->Id)
-                    {
-                        case SPELL_TELEPORT_TO_BAINE:
-                            teleportType = 1;
-                            break;
-                        case SPELL_TELEPORT_TO_JAINA:
-                            teleportType = 2;
-                            break;
-                        case SPELL_TELEPORT_TO_SYLVANAS:
-                            teleportType = 3;
-                            break;
-                        case SPELL_TELEPORT_TO_TYRANDE:
-                            teleportType = 4;
-                            break;
-                        case SPELL_TELEPORT_TO_MUROZOND:
-                            teleportType = 5;
-                            break;
-                        case SPELL_TELEPORT_TO_ENTRANCE:
-                            teleportType = 0;
-                            break;
-                        case SPELL_TELEPORT_TO_EXIT:
-                            teleportType = 6;
-                            break;
-                        default:
-                            return;
-                    }
+            case 20:
+                player->CLOSE_GOSSIP_MENU();
+                player->TeleportTo(967, -11961.371f, 12294.102f, 1.284f, 5.094f);
+                break;
+            case 21:
+                player->CLOSE_GOSSIP_MENU();
+                player->TeleportTo(967, -12058.748f, 12245.875f, -6.151f, 5.464f);
+                break;
+            case 22:
+                player->CLOSE_GOSSIP_MENU();
+                player->TeleportTo(967, -12121.12f, 12174.846f, -2.735f, 5.604f);
+                break;
+            case 23:
+                player->CLOSE_GOSSIP_MENU();
+                player->TeleportTo(967, -12157.026f, 12090.791f, 2.308f, 6.029f);
+                break;
+            default:
+                break;
+            }
+        }
+        return true;
+    }
+};
 
-                    // Perform teleport
-                    const Position& pos = teleportPositions[teleportType];
-                    player->NearTeleportTo(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation());
+class npc_arm_tentacle_one : public CreatureScript
+{
+public:
+    npc_arm_tentacle_one() : CreatureScript("npc_arm_tentacle_one") { }
+
+    struct npc_arm_tentacle_oneAI : public ScriptedAI
+    {
+        npc_arm_tentacle_oneAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+
+        void Reset()
+        {
+            me->RemoveAllAuras();
+            me->SetVisible(false);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetCanFly(true);
+            events.Reset();
+        }
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            DoCast(SPELL_BURNING_BLODD);
+            events.ScheduleEvent(EVENT_SUMMON, 30000);
+            instance->SetData(DATA_DAMAGE_DEATHWING, IN_PROGRESS);
+        }
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim() || me->HasUnitState(UNIT_STATE_CASTING))
+                return;
+
+            events.Update(diff);
+
+            while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                case EVENT_SUMMON:
+                    events.ScheduleEvent(EVENT_SUMMON, 5000);
+                    if (me->GetHealthPct() < 50)
+                    {
+                        events.CancelEvent(EVENT_SUMMON);
+                        me->SummonCreature(NPC_MYTATED_CORRUPTION, -12110.934f, 12184.085f, -2.731f, 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    }
+                    break;
                 }
             }
         }
 
-        void Register() override
+        void JustDied(Unit* /*killer*/)
         {
-            OnEffectHitTarget += SpellEffectFn(spell_end_time_teleport_SpellScript::HandleTeleport, EFFECT_0, SPELL_EFFECT_TELEPORT_UNITS);
+            instance->SetData(DATA_DAMAGE_DEATHWING, DONE);
         }
+
     };
 
-    SpellScript* GetSpellScript() const override
+    CreatureAI* GetAI(Creature* creature) const
     {
-        return new spell_end_time_teleport_SpellScript();
+        return GetDragonSoulAI<npc_arm_tentacle_oneAI>(creature);
     }
 };
 
-void AddSC_end_time_teleport()
+class npc_arm_tentacle_two : public CreatureScript
 {
-    new npc_end_time_teleport();
-    new go_end_time_teleport();
-    new spell_end_time_teleport();
+public:
+    npc_arm_tentacle_two() : CreatureScript("npc_arm_tentacle_two") { }
+
+    struct npc_arm_tentacle_twoAI : public ScriptedAI
+    {
+        npc_arm_tentacle_twoAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+
+        void Reset()
+        {
+            me->RemoveAllAuras();
+            me->SetVisible(false);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetCanFly(true);
+            events.Reset();
+        }
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            DoCast(SPELL_BURNING_BLODD);
+            events.ScheduleEvent(EVENT_SUMMON, 30000);
+            instance->SetData(DATA_DAMAGE_DEATHWING, IN_PROGRESS);
+        }
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim() || me->HasUnitState(UNIT_STATE_CASTING))
+                return;
+
+            events.Update(diff);
+
+            while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                case EVENT_SUMMON:
+                    events.ScheduleEvent(EVENT_SUMMON, 5000);
+                    if (me->GetHealthPct() < 50)
+                    {
+                        events.CancelEvent(EVENT_SUMMON);
+                        me->SummonCreature(NPC_MYTATED_CORRUPTION, -12060.653f, 12235.851f, -6.255f, 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    }
+                    break;
+                }
+            }
+        }
+
+        void JustDied(Unit* /*killer*/)
+        {
+            instance->SetData(DATA_DAMAGE_DEATHWING, DONE);
+        }
+
+    };
+
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return GetDragonSoulAI<npc_arm_tentacle_twoAI>(creature);
+    }
+};
+
+class npc_wing_tentacle_one : public CreatureScript
+{
+public:
+    npc_wing_tentacle_one() : CreatureScript("npc_wing_tentacle_one") { }
+
+    struct npc_wing_tentacle_oneAI : public ScriptedAI
+    {
+        npc_wing_tentacle_oneAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+
+        void Reset()
+        {
+            me->RemoveAllAuras();
+            me->SetVisible(false);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetCanFly(true);
+            events.Reset();
+        }
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            DoCast(SPELL_BURNING_BLODD);
+            events.ScheduleEvent(EVENT_SUMMON, 30000);
+            instance->SetData(DATA_DAMAGE_DEATHWING, IN_PROGRESS);
+        }
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim() || me->HasUnitState(UNIT_STATE_CASTING))
+                return;
+
+            events.Update(diff);
+
+            while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                case EVENT_SUMMON:
+                    events.ScheduleEvent(EVENT_SUMMON, 5000);
+                    if (me->GetHealthPct() < 50)
+                    {
+                        events.CancelEvent(EVENT_SUMMON);
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                            me->SummonCreature(NPC_MYTATED_CORRUPTION, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    }
+                    break;
+                }
+            }
+        }
+
+        void JustDied(Unit* /*killer*/)
+        {
+            instance->SetData(DATA_DAMAGE_DEATHWING, DONE);
+        }
+
+    };
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return GetDragonSoulAI<npc_wing_tentacle_oneAI>(creature);
+    }
+};
+
+class npc_wing_tentacle_two : public CreatureScript
+{
+public:
+    npc_wing_tentacle_two() : CreatureScript("npc_wing_tentacle_two") { }
+
+    struct npc_wing_tentacle_twoAI : public ScriptedAI
+    {
+        npc_wing_tentacle_twoAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+
+        void Reset()
+        {
+            me->RemoveAllAuras();
+            me->SetVisible(false);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetCanFly(true);
+            events.Reset();
+        }
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            DoCast(SPELL_BURNING_BLODD);
+            events.ScheduleEvent(EVENT_SUMMON, 30000);
+            instance->SetData(DATA_DAMAGE_DEATHWING, IN_PROGRESS);
+        }
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim() || me->HasUnitState(UNIT_STATE_CASTING))
+                return;
+
+            events.Update(diff);
+
+            while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                case EVENT_SUMMON:
+                    events.ScheduleEvent(EVENT_SUMMON, 5000);
+                    if (me->GetHealthPct() < 50)
+                    {
+                        events.CancelEvent(EVENT_SUMMON);
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                            me->SummonCreature(NPC_MYTATED_CORRUPTION, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0.0f, TEMPSUMMON_CORPSE_DESPAWN, 120000);
+                    }
+                    break;
+                }
+            }
+        }
+
+        void JustDied(Unit* /*killer*/)
+        {
+            instance->SetData(DATA_DAMAGE_DEATHWING, DONE);
+        }
+
+    };
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return GetDragonSoulAI<npc_wing_tentacle_twoAI>(creature);
+    }
+};
+
+void AddSC_boss_deathwing()
+{
+    new boss_deathwing();
+    new npc_maelstrom_trall();
+    new npc_arm_tentacle_one();
+    new npc_arm_tentacle_two();
+    new npc_wing_tentacle_one();
+    new npc_wing_tentacle_two();
+    new Teleportation_to_the_platforms();
+    //new npc_mytated_corruption();
+    //new npc_maelstrom_alexstrasza();
+    //new npc_maelstrom_kalecgos();
+    //new npc_maelstrom_ysera();
+    //new npc_maelstrom_nozdormy();
 }
