@@ -1,0 +1,17 @@
+{
+  "OutputFoldersPerTargetSystem": {
+    "Local Machine": [
+      "out\\build\\x64-Debug",
+      "out\\install\\x64-Debug"
+    ]
+  },
+  "ExpandedNodes": [
+    "",
+    "\\dep",
+    "\\dep\\acelite",
+    "\\dep\\acelite\\ace",
+    "\\dep\\acelite\\ace\\Compression"
+  ],
+  "SelectedNode": "\\dep\\acelite\\ace\\Compression\\Compression_vs2017.sln",
+  "PreviewInSolutionExplorer": false
+}
